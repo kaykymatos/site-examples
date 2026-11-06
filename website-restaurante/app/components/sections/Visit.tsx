@@ -1,0 +1,3 @@
+export default function Visit() {
+  return <section className="visit-section" id="visit"><div><span className="section-kicker">YOUR SEAT IS WAITING</span><h2>Meet us<br /><em>at the table.</em></h2></div><div className="visit-detail"><div><span>FIND US</span><p>118 Wythe Avenue<br />Brooklyn, NY 11249</p></div><div><span>COME ON IN</span><p>Tuesday — Sunday<br />5:00 pm — 10:00 pm</p><p className="closed-note">Closed Mondays · Walk-ins welcome</p></div><a className="reservation-button" href="tel:+15551234567"><span className="reservation-icon" aria-hidden="true">◷</span>Call to reserve a table <span>↗</span></a></div></section>;
+}

@@ -1,0 +1,3 @@
+export default function Story() {
+  return <section className="story-section" id="story"><div className="story-photo" role="img" aria-label="A colorful platter of fresh seasonal vegetables" /><div className="story-copy"><span className="section-kicker">A NEIGHBORHOOD KIND OF PLACE</span><h2>Come as you are.<br /><em>Stay a little.</em></h2><p>Our kitchen started with a simple idea: the best nights aren&apos;t planned, they just happen around a table.</p><p>We cook the food we love, pour wines from people we admire, and save you a seat whenever you need one.</p><a className="story-link" href="#visit">A little more about us <span>↗</span></a></div></section>;
+}

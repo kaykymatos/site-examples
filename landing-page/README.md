@@ -14,7 +14,9 @@ Open [http://localhost:3000](http://localhost:3000). Use `npm run lint` and `npm
 ## Project structure
 
 - `app/page.tsx` — route entry point
-- `app/components/LandingExperience.tsx` — page sections and reusable UI
+- `app/components/LandingExperience.tsx` — page composition
+- `app/components/ArrowIcon.tsx` — shared arrow icon
+- `app/components/sections/` — header, hero, logo strip, benefits, story, CTA, and footer
 - `app/globals.css` — responsive layout, component styles, and design tokens
 - `public/images/workspace.jpg` — locally served workspace photo
 

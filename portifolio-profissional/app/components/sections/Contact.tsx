@@ -1,0 +1,3 @@
+export default function Contact() {
+  return <footer className="portfolio-footer" id="contact"><div className="section-topline"><span>04 — YOUR TURN</span><span>HAVE A GOOD ONE IN MIND?</span></div><div className="footer-main"><h2>Let&apos;s make<br /><em>something matter.</em></h2><a className="email-button" href="mailto:hello@designer.example">GET IN TOUCH <span>↗</span></a></div><div className="footer-bottom"><a className="portfolio-logo" href="#home">ID<span>.</span></a><span>© 2024 · Sample professional portfolio</span><div><a href="mailto:hello@designer.example">CONTACT ↗</a></div></div></footer>;
+}

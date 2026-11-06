@@ -1,0 +1,3 @@
+export default function Hero() {
+  return <section className="realty-hero" id="home"><div className="hero-backdrop" /><div className="hero-overlay" /><div className="hero-copy"><span className="hero-eyebrow">REAL ESTATE, WITH A LITTLE MORE HEART</span><h1>Find a place<br />to <em>feel at home.</em></h1><p>Good homes. Good people. A more personal way to find your next chapter in Brooklyn.</p><a className="hero-cta" href="#homes">Explore available homes <span>↓</span></a></div><div className="hero-caption"><span>FORT GREENE · BROOKLYN</span><span>40°41&apos;N 73°58&apos;W</span></div><div className="hero-feature"><span>THE NEIGHBORHOOD EDIT</span><strong>Find a little<br />room to grow.</strong><a href="#about">Get to know us ↗</a></div></section>;
+}

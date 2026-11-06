@@ -1,0 +1,5 @@
+export default function About() {
+  return (
+    <section className="about-section" id="about"><div className="section-topline"><span>02 — A LITTLE ABOUT THE PRACTICE</span><span>DESIGN WITH A POINT OF VIEW</span></div><div className="about-grid"><h2>Good design<br />should <em>feel like</em><br />something.</h2><div className="about-copy"><p className="about-lead">A creative partner for people who believe in what they&apos;re building — and want the world to feel it, too.</p><p>This sample portfolio represents eight years of creative work, from finding the heart of a brand to bringing it to life with clarity and character.</p><p>Independent by choice. Collaborative by nature. Always up for a long walk and a short feedback loop.</p><div className="skill-tags"><span>BRAND IDENTITY</span><span>ART DIRECTION</span><span>DIGITAL DESIGN</span><span>STRATEGY</span></div><a className="about-link" href="mailto:hello@designer.example">GET IN TOUCH <span>↗</span></a></div></div></section>
+  );
+}

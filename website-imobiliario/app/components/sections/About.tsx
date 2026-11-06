@@ -1,0 +1,3 @@
+export default function About() {
+  return <section className="about-section" id="about"><div className="about-image" role="img" aria-label="A sunlit modern home interior with a calm neutral palette" /><div className="about-copy"><span className="section-eyebrow">A MORE PERSONAL KIND OF REALTY</span><h2>A home is more than<br />an <em>address.</em></h2><p>It&apos;s where Sunday mornings stretch out. Where the neighborhood starts feeling like yours. Where life unfolds, one ordinary, lovely day at a time.</p><p>Our local advisors help you find the place and the feeling that comes with it. No pressure. No scripts. Just good people who know Brooklyn and really listen.</p><a href="mailto:hello@property.example">A little more about us <span>↗</span></a></div></section>;
+}
