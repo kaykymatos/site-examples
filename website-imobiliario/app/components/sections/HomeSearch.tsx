@@ -1,9 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { listings } from "../propertyData";
+
+type ListingFilters = {
+  search: string;
+  kind: "Any" | "Buy" | "Rent";
+  bedrooms: string;
+  budget: string;
+};
+
+function filterListings({ search, kind, bedrooms, budget }: ListingFilters) {
+  return listings.filter((listing) => {
+    const matchesLocation = `${listing.neighborhood} ${listing.address}`.toLowerCase().includes(search.trim().toLowerCase());
+    const matchesKind = kind === "Any" || listing.kind === kind;
+    const matchesBedrooms = listing.beds >= Number(bedrooms);
+    const maximumPrice = Number(budget);
+    const budgetMatchesType = maximumPrice <= 7500
+      ? listing.kind === "Rent"
+      : listing.kind === "Buy";
+    const matchesBudget = maximumPrice === 0
+      || (budgetMatchesType && listing.price <= maximumPrice);
+    return matchesLocation && matchesKind && matchesBedrooms && matchesBudget;
+  });
+}
 
 function SearchPanel({
   search, setSearch, kind, setKind, bedrooms, setBedrooms, budget, setBudget,
@@ -45,10 +67,7 @@ function SearchPanel({
         <span>PROPERTY TYPE</span>
         <select
           aria-label="Property type"
-          onChange={(event) => {
-            setKind(event.target.value as "Any" | "Buy" | "Rent");
-            setBudget("0");
-          }}
+          onChange={(event) => setKind(event.target.value as "Any" | "Buy" | "Rent")}
           value={kind}
         >
           <option value="Any">Buy or rent</option>
@@ -89,19 +108,44 @@ export default function HomeSearch() {
   const [kind, setKind] = useState<"Any" | "Buy" | "Rent">("Any");
   const [bedrooms, setBedrooms] = useState("0");
   const [budget, setBudget] = useState("0");
+  const [transition, setTransition] = useState<"idle" | "exiting" | "entering">("idle");
+  const filtersRef = useRef<ListingFilters>({ search, kind, bedrooms, budget });
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredListings = useMemo(() => listings.filter((listing) => {
-    const matchesLocation = `${listing.neighborhood} ${listing.address}`.toLowerCase().includes(search.trim().toLowerCase());
-    const matchesKind = kind === "Any" || listing.kind === kind;
-    const matchesBedrooms = listing.beds >= Number(bedrooms);
-    const maximumPrice = Number(budget);
-    const budgetMatchesType = maximumPrice <= 7500
-      ? listing.kind === "Rent"
-      : listing.kind === "Buy";
-    const matchesBudget = maximumPrice === 0
-      || (budgetMatchesType && listing.price <= maximumPrice);
-    return matchesLocation && matchesKind && matchesBedrooms && matchesBudget;
-  }), [search, kind, bedrooms, budget]);
+  useEffect(() => () => {
+    if (transitionTimer.current) {
+      clearTimeout(transitionTimer.current);
+    }
+  }, []);
 
-  return <section className="listings-section" id="homes"><div className="listings-heading"><div><span className="section-eyebrow">A GOOD PLACE TO BEGIN</span><h2>Find your <em>somewhere.</em></h2></div><a href="mailto:hello@homestead.example">Not sure where to start? Let&apos;s talk ↗</a></div><SearchPanel search={search} setSearch={setSearch} kind={kind} setKind={setKind} bedrooms={bedrooms} setBedrooms={setBedrooms} budget={budget} setBudget={setBudget} /><div className="results-heading"><div><h3>Places to put down roots</h3><span>{filteredListings.length} thoughtfully chosen {filteredListings.length === 1 ? "home" : "homes"}</span></div><button type="button" className="sort-button" onClick={() => { setSearch(""); setKind("Any"); setBedrooms("0"); setBudget("0"); }}>Clear filters <span>↻</span></button></div>{filteredListings.length ? <div className="listing-grid">{filteredListings.map((home) => <article className="listing-card" key={home.slug}><Link className="listing-card-link" href={`/homes/${home.slug}`} aria-label={`View details for ${home.name}`}><div className="listing-image">{home.badge && <span className="listing-badge">{home.badge}</span>}<span className="favorite-button" aria-hidden="true">♡</span><Image src={home.image} alt={`${home.propertyType} in ${home.neighborhood}`} fill sizes="(max-width: 560px) 100vw, (max-width: 850px) 50vw, 33vw" /></div><div className="listing-content"><span className="listing-neighborhood">{home.neighborhood} · {home.kind === "Buy" ? "FOR SALE" : "FOR RENT"}</span><div className="listing-title"><h4>{home.name}</h4><strong>{home.priceLabel}{home.kind === "Rent" && <small> / mo</small>}</strong></div><p>{home.address}</p><div className="listing-features"><span><b>{home.beds}</b> beds</span><span><b>{home.baths}</b> baths</span><span><b>{home.area.toLocaleString("en-US")}</b> sq ft</span><span className="listing-more" aria-hidden="true">↗</span></div></div></Link></article>)}</div> : <div className="no-results"><span>⌕</span><h3>No homes found just yet.</h3><p>Try a different neighborhood or loosen your filters to see more places.</p><button className="clear-button" onClick={() => { setSearch(""); setKind("Any"); setBedrooms("0"); setBudget("0"); }} type="button">Clear all filters</button></div>}</section>;
+  const filteredListings = useMemo(
+    () => filterListings({ search, kind, bedrooms, budget }),
+    [search, kind, bedrooms, budget],
+  );
+  const [displayedListings, setDisplayedListings] = useState(filteredListings);
+
+  function updateFilters(updates: Partial<ListingFilters>) {
+    const nextFilters = { ...filtersRef.current, ...updates };
+    filtersRef.current = nextFilters;
+    setSearch(nextFilters.search);
+    setKind(nextFilters.kind);
+    setBedrooms(nextFilters.bedrooms);
+    setBudget(nextFilters.budget);
+
+    if (transitionTimer.current) {
+      clearTimeout(transitionTimer.current);
+    }
+
+    setTransition("exiting");
+    transitionTimer.current = setTimeout(() => {
+      setDisplayedListings(filterListings(nextFilters));
+      setTransition("entering");
+      transitionTimer.current = setTimeout(() => {
+        setTransition("idle");
+        transitionTimer.current = null;
+      }, 500);
+    }, 180);
+  }
+
+  return <section className="listings-section" id="homes"><div className="listings-heading"><div><span className="section-eyebrow">A GOOD PLACE TO BEGIN</span><h2>Find your <em>somewhere.</em></h2></div><a href="mailto:hello@homestead.example">Not sure where to start? Let&apos;s talk ↗</a></div><SearchPanel search={search} setSearch={(value) => updateFilters({ search: value })} kind={kind} setKind={(value) => updateFilters({ kind: value, ...(value === kind ? {} : { budget: "0" }) })} bedrooms={bedrooms} setBedrooms={(value) => updateFilters({ bedrooms: value })} budget={budget} setBudget={(value) => updateFilters({ budget: value })} /><div className="results-heading"><div><h3>Places to put down roots</h3><span>{filteredListings.length} thoughtfully chosen {filteredListings.length === 1 ? "home" : "homes"}</span></div><button type="button" className="sort-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })}>Clear filters <span>↻</span></button></div><div className={`listing-results${transition === "exiting" ? " is-exiting" : transition === "entering" ? " is-entering" : ""}`} aria-live="polite">{displayedListings.length ? <div className="listing-grid">{displayedListings.map((home) => <article className="listing-card" key={home.slug}><Link className="listing-card-link" href={`/homes/${home.slug}`} aria-label={`View details for ${home.name}`}><div className="listing-image">{home.badge && <span className="listing-badge">{home.badge}</span>}<span className="favorite-button" aria-hidden="true">♡</span><Image src={home.image} alt={`${home.propertyType} in ${home.neighborhood}`} fill sizes="(max-width: 560px) 100vw, (max-width: 850px) 50vw, 33vw" /></div><div className="listing-content"><span className="listing-neighborhood">{home.neighborhood} · {home.kind === "Buy" ? "FOR SALE" : "FOR RENT"}</span><div className="listing-title"><h4>{home.name}</h4><strong>{home.priceLabel}{home.kind === "Rent" && <small> / mo</small>}</strong></div><p>{home.address}</p><div className="listing-features"><span><b>{home.beds}</b> beds</span><span><b>{home.baths}</b> baths</span><span><b>{home.area.toLocaleString("en-US")}</b> sq ft</span><span className="listing-more" aria-hidden="true">↗</span></div></div></Link></article>)}</div> : <div className="no-results"><span>⌕</span><h3>No homes found just yet.</h3><p>Try a different neighborhood or loosen your filters to see more places.</p><button className="clear-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })} type="button">Clear all filters</button></div>}</div></section>;
 }
