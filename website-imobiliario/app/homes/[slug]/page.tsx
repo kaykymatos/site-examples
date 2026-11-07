@@ -4,23 +4,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Footer from "../../components/sections/Footer";
 import Header from "../../components/sections/Header";
-import { listings } from "../../components/propertyData";
+import { getListingBySlug, getListings } from "../../services/propertyService";
 
 type HomeDetailsPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-function findListing(slug: string) {
-  return listings.find((listing) => listing.slug === slug);
-}
-
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const listings = await getListings();
   return listings.map(({ slug }) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: HomeDetailsPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const home = findListing(slug);
+  const home = await getListingBySlug(slug);
 
   return {
     title: home ? `${home.name} | Brooklyn Property Advisors` : "Home not found | Brooklyn Property Advisors",
@@ -30,7 +27,7 @@ export async function generateMetadata({ params }: HomeDetailsPageProps): Promis
 
 export default async function HomeDetailsPage({ params }: HomeDetailsPageProps) {
   const { slug } = await params;
-  const home = findListing(slug);
+  const home = await getListingBySlug(slug);
 
   if (!home) {
     notFound();

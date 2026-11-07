@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { listings } from "../propertyData";
+import type { Listing } from "../propertyData";
 
 type ListingFilters = {
   search: string;
@@ -12,7 +12,9 @@ type ListingFilters = {
   budget: string;
 };
 
-function filterListings({ search, kind, bedrooms, budget }: ListingFilters) {
+const pageSizeOptions = [10, 20, 30, 50, 100];
+
+function filterListings(listings: Listing[], { search, kind, bedrooms, budget }: ListingFilters) {
   return listings.filter((listing) => {
     const matchesLocation = `${listing.neighborhood} ${listing.address}`.toLowerCase().includes(search.trim().toLowerCase());
     const matchesKind = kind === "Any" || listing.kind === kind;
@@ -103,11 +105,13 @@ function SearchPanel({
   );
 }
 
-export default function HomeSearch() {
+export default function HomeSearch({ listings }: { listings: Listing[] }) {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<"Any" | "Buy" | "Rent">("Any");
   const [bedrooms, setBedrooms] = useState("0");
   const [budget, setBudget] = useState("0");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
   const [transition, setTransition] = useState<"idle" | "exiting" | "entering">("idle");
   const filtersRef = useRef<ListingFilters>({ search, kind, bedrooms, budget });
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,26 +123,30 @@ export default function HomeSearch() {
   }, []);
 
   const filteredListings = useMemo(
-    () => filterListings({ search, kind, bedrooms, budget }),
-    [search, kind, bedrooms, budget],
+    () => filterListings(listings, { search, kind, bedrooms, budget }),
+    [listings, search, kind, bedrooms, budget],
   );
-  const [displayedListings, setDisplayedListings] = useState(filteredListings);
+  const pageCount = Math.max(1, Math.ceil(filteredListings.length / pageSize));
+  const firstPageNumber = Math.max(1, Math.min(page - 2, pageCount - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(pageCount, 5) },
+    (_, index) => firstPageNumber + index,
+  );
+  const firstVisibleListing = filteredListings.length ? (page - 1) * pageSize + 1 : 0;
+  const lastVisibleListing = Math.min(page * pageSize, filteredListings.length);
+  const [displayedListings, setDisplayedListings] = useState(
+    filteredListings.slice(0, pageSize),
+  );
 
-  function updateFilters(updates: Partial<ListingFilters>) {
-    const nextFilters = { ...filtersRef.current, ...updates };
-    filtersRef.current = nextFilters;
-    setSearch(nextFilters.search);
-    setKind(nextFilters.kind);
-    setBedrooms(nextFilters.bedrooms);
-    setBudget(nextFilters.budget);
-
+  function transitionToPage(nextListings: Listing[], nextPage: number, nextPageSize: number) {
     if (transitionTimer.current) {
       clearTimeout(transitionTimer.current);
     }
 
     setTransition("exiting");
     transitionTimer.current = setTimeout(() => {
-      setDisplayedListings(filterListings(nextFilters));
+      const startIndex = (nextPage - 1) * nextPageSize;
+      setDisplayedListings(nextListings.slice(startIndex, startIndex + nextPageSize));
       setTransition("entering");
       transitionTimer.current = setTimeout(() => {
         setTransition("idle");
@@ -147,5 +155,136 @@ export default function HomeSearch() {
     }, 180);
   }
 
-  return <section className="listings-section" id="homes"><div className="listings-heading"><div><span className="section-eyebrow">A GOOD PLACE TO BEGIN</span><h2>Find your <em>somewhere.</em></h2></div><a href="mailto:hello@homestead.example">Not sure where to start? Let&apos;s talk ↗</a></div><SearchPanel search={search} setSearch={(value) => updateFilters({ search: value })} kind={kind} setKind={(value) => updateFilters({ kind: value, ...(value === kind ? {} : { budget: "0" }) })} bedrooms={bedrooms} setBedrooms={(value) => updateFilters({ bedrooms: value })} budget={budget} setBudget={(value) => updateFilters({ budget: value })} /><div className="results-heading"><div><h3>Places to put down roots</h3><span>{filteredListings.length} thoughtfully chosen {filteredListings.length === 1 ? "home" : "homes"}</span></div><button type="button" className="sort-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })}>Clear filters <span>↻</span></button></div><div className={`listing-results${transition === "exiting" ? " is-exiting" : transition === "entering" ? " is-entering" : ""}`} aria-live="polite">{displayedListings.length ? <div className="listing-grid">{displayedListings.map((home) => <article className="listing-card" key={home.slug}><Link className="listing-card-link" href={`/homes/${home.slug}`} aria-label={`View details for ${home.name}`}><div className="listing-image">{home.badge && <span className="listing-badge">{home.badge}</span>}<span className="favorite-button" aria-hidden="true">♡</span><Image src={home.image} alt={`${home.propertyType} in ${home.neighborhood}`} fill sizes="(max-width: 560px) 100vw, (max-width: 850px) 50vw, 33vw" /></div><div className="listing-content"><span className="listing-neighborhood">{home.neighborhood} · {home.kind === "Buy" ? "FOR SALE" : "FOR RENT"}</span><div className="listing-title"><h4>{home.name}</h4><strong>{home.priceLabel}{home.kind === "Rent" && <small> / mo</small>}</strong></div><p>{home.address}</p><div className="listing-features"><span><b>{home.beds}</b> beds</span><span><b>{home.baths}</b> baths</span><span><b>{home.area.toLocaleString("en-US")}</b> sq ft</span><span className="listing-more" aria-hidden="true">↗</span></div></div></Link></article>)}</div> : <div className="no-results"><span>⌕</span><h3>No homes found just yet.</h3><p>Try a different neighborhood or loosen your filters to see more places.</p><button className="clear-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })} type="button">Clear all filters</button></div>}</div></section>;
+  function updateFilters(updates: Partial<ListingFilters>) {
+    const nextFilters = { ...filtersRef.current, ...updates };
+    filtersRef.current = nextFilters;
+    setSearch(nextFilters.search);
+    setKind(nextFilters.kind);
+    setBedrooms(nextFilters.bedrooms);
+    setBudget(nextFilters.budget);
+    setPage(1);
+    transitionToPage(filterListings(listings, nextFilters), 1, pageSize);
+  }
+
+  function changePage(nextPage: number) {
+    if (nextPage < 1 || nextPage > pageCount || nextPage === page) return;
+    setPage(nextPage);
+    transitionToPage(filteredListings, nextPage, pageSize);
+  }
+
+  function changePageSize(nextPageSize: number) {
+    if (nextPageSize === pageSize) return;
+    setPageSize(nextPageSize);
+    setPage(1);
+    transitionToPage(filteredListings, 1, nextPageSize);
+  }
+
+  return (
+    <section className="listings-section" id="homes">
+      <div className="listings-heading">
+        <div><span className="section-eyebrow">A GOOD PLACE TO BEGIN</span><h2>Find your <em>somewhere.</em></h2></div>
+        <a href="mailto:hello@homestead.example">Not sure where to start? Let&apos;s talk ↗</a>
+      </div>
+      <div className="page-size-control">
+        <label>
+          Show
+          <select aria-label="Homes per page" onChange={(event) => changePageSize(Number(event.target.value))} value={pageSize}>
+            {pageSizeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+          per page
+        </label>
+      </div>
+      <SearchPanel
+        search={search}
+        setSearch={(value) => updateFilters({ search: value })}
+        kind={kind}
+        setKind={(value) => updateFilters({ kind: value, ...(value === kind ? {} : { budget: "0" }) })}
+        bedrooms={bedrooms}
+        setBedrooms={(value) => updateFilters({ bedrooms: value })}
+        budget={budget}
+        setBudget={(value) => updateFilters({ budget: value })}
+      />
+      <div className="results-heading">
+        <div>
+          <h3>Places to put down roots</h3>
+          <span>{filteredListings.length} thoughtfully chosen {filteredListings.length === 1 ? "home" : "homes"}</span>
+        </div>
+        <button type="button" className="sort-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })}>
+          Clear filters <span>↻</span>
+        </button>
+      </div>
+      <div className={`listing-results${transition === "exiting" ? " is-exiting" : transition === "entering" ? " is-entering" : ""}`} aria-live="polite">
+        {displayedListings.length ? (
+          <div className="listing-grid">
+            {displayedListings.map((home) => (
+              <article className="listing-card" key={home.slug}>
+                <Link className="listing-card-link" href={`/homes/${home.slug}`} aria-label={`View details for ${home.name}`}>
+                  <div className="listing-image">
+                    {home.badge && <span className="listing-badge">{home.badge}</span>}
+                    <span className="favorite-button" aria-hidden="true">♡</span>
+                    <Image src={home.image} alt={`${home.propertyType} in ${home.neighborhood}`} fill sizes="(max-width: 560px) 100vw, (max-width: 850px) 50vw, 33vw" />
+                  </div>
+                  <div className="listing-content">
+                    <span className="listing-neighborhood">{home.neighborhood} · {home.kind === "Buy" ? "FOR SALE" : "FOR RENT"}</span>
+                    <div className="listing-title">
+                      <h4>{home.name}</h4>
+                      <strong>{home.priceLabel}{home.kind === "Rent" && <small> / mo</small>}</strong>
+                    </div>
+                    <p>{home.address}</p>
+                    <div className="listing-features">
+                      <span><b>{home.beds}</b> beds</span>
+                      <span><b>{home.baths}</b> baths</span>
+                      <span><b>{home.area.toLocaleString("en-US")}</b> sq ft</span>
+                      <span className="listing-more" aria-hidden="true">↗</span>
+                    </div>
+                  </div>
+                </Link>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="no-results">
+            <span>⌕</span>
+            <h3>No homes found just yet.</h3>
+            <p>Try a different neighborhood or loosen your filters to see more places.</p>
+            <button className="clear-button" onClick={() => updateFilters({ search: "", kind: "Any", bedrooms: "0", budget: "0" })} type="button">
+              Clear all filters
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="listing-pagination">
+        <span className="pagination-summary" aria-live="polite">
+          Showing {firstVisibleListing}–{lastVisibleListing} of {filteredListings.length}
+        </span>
+        <nav className="pagination-controls" aria-label="Property pages">
+          <button type="button" onClick={() => changePage(page - 1)} disabled={page === 1} aria-label="Previous page">←</button>
+          {firstPageNumber > 1 && (
+            <>
+              <button type="button" onClick={() => changePage(1)} aria-label="Page 1">1</button>
+              <span aria-hidden="true">…</span>
+            </>
+          )}
+          {visiblePages.map((pageNumber) => (
+            <button
+              type="button"
+              key={pageNumber}
+              onClick={() => changePage(pageNumber)}
+              aria-label={`Page ${pageNumber}`}
+              aria-current={pageNumber === page ? "page" : undefined}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          {visiblePages[visiblePages.length - 1] < pageCount && (
+            <>
+              <span aria-hidden="true">…</span>
+              <button type="button" onClick={() => changePage(pageCount)} aria-label={`Page ${pageCount}`}>{pageCount}</button>
+            </>
+          )}
+          <button type="button" onClick={() => changePage(page + 1)} disabled={page === pageCount} aria-label="Next page">→</button>
+        </nav>
+      </div>
+    </section>
+  );
 }

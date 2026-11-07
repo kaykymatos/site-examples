@@ -2,25 +2,22 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dishes } from "../../components/dishData";
 import Footer from "../../components/sections/Footer";
 import Header from "../../components/sections/Header";
+import { getDishBySlug, getDishes } from "../../services/dishService";
 
 type DishDetailsPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-function findDish(slug: string) {
-  return dishes.find((dish) => dish.slug === slug);
-}
-
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const dishes = await getDishes();
   return dishes.map(({ slug }) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: DishDetailsPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const dish = findDish(slug);
+  const dish = await getDishBySlug(slug);
 
   return {
     title: dish ? `${dish.name} | Neighborhood Kitchen` : "Dish not found | Neighborhood Kitchen",
@@ -30,7 +27,7 @@ export async function generateMetadata({ params }: DishDetailsPageProps): Promis
 
 export default async function DishDetailsPage({ params }: DishDetailsPageProps) {
   const { slug } = await params;
-  const dish = findDish(slug);
+  const dish = await getDishBySlug(slug);
 
   if (!dish) {
     notFound();

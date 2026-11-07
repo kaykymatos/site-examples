@@ -4,7 +4,10 @@ import Hero from "./sections/Hero";
 import Menu from "./sections/Menu";
 import Story from "./sections/Story";
 import Visit from "./sections/Visit";
+import { getDishes } from "../services/dishService";
 
-export default function RestaurantExperience() {
-  return <main className="restaurant-page"><Header /><Hero /><Menu /><Story /><Visit /><Footer /></main>;
+export default async function RestaurantExperience() {
+  const dishes = await getDishes();
+
+  return <main className="restaurant-page"><Header /><Hero /><Menu dishes={dishes} /><Story /><Visit /><Footer /></main>;
 }
